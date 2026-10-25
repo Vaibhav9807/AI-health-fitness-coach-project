@@ -1,0 +1,13 @@
+meal,name,diet,allergens,calories,protein,carbs,fat
+Breakfast,Oats with milk banana and peanut butter,vegetarian,"peanuts;milk;gluten",430,17,62,13
+Breakfast,Tofu scramble with whole-grain toast,vegan,"soy;gluten",390,24,43,14
+Breakfast,Eggs with whole-grain toast and fruit,non_vegetarian,"eggs;gluten",410,23,42,16
+Lunch,Lentil rice and vegetable bowl,vegan,,560,23,91,11
+Lunch,Chicken brown rice and vegetables,non_vegetarian,,590,42,65,15
+Lunch,Chickpea and quinoa salad,vegan,,520,21,76,14
+Evening snack,Apple with unsalted almonds,vegan,tree nuts,220,6,28,12
+Evening snack,Plain yogurt with berries,vegetarian,milk,190,14,25,4
+Evening snack,Roasted chickpeas,vegan,,180,9,27,5
+Dinner,Bean and vegetable curry with rice,vegan,,570,20,88,15
+Dinner,Baked fish potato and greens,non_vegetarian,fish,520,38,49,17
+Dinner,Paneer with vegetables and roti,vegetarian,"milk;gluten",610,29,58,27

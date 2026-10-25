@@ -1,0 +1,123 @@
+/* Shared navy surfaces and accessible green accents. */
+body {
+  --ink: #f1f5f4;
+  --paper: #0b1424;
+  --muted: #a3b0bc;
+  --line: #293b53;
+  --white: #14243b;
+  --shadow: 0 18px 50px rgba(0, 0, 0, .22);
+  background: #0b1424;
+  color: #f1f5f4;
+}
+.eyebrow { color: #9bb6a6; }
+.hero .eyebrow { color: #8bd2aa; }
+.welcome-row p, .page-intro p, .today { color: #a3b0bc; }
+#mobile-menu { color: #d6e3e0; }
+.landing, .app-shell { background: #0b1424; color: #f1f5f4; }
+.brand-light, .nav-actions > a, .nav-actions .button-quiet { color: #b4c1c9; }
+.hero h1, .section-head h2, .how-copy h2, .closing h2 { color: #f5f8f7; }
+.hero-copy > p, .hero-proof, .section-head > p, .how-copy > p, .feature-card p,
+.how-step span, .public-footer, .micro-note { color: #a5b1bc; }
+.features-section { background: #101d31; }
+.feature-card, .stat-card, .panel, .modal-card, .meal-card {
+  background: #14243b; border-color: #293b53; color: #f1f5f4;
+}
+.feature-card h3, .stat-card > b, .panel-heading h2, .activity-row b,
+.goal-panel h2, .meal-card h3, .history-row b, .workout-form h2,
+.how-step strong, .modal-card h2 { color: #f2f6f5; }
+.feature-card p, .stat-top, .stat-helper, .muted-label, .activity-row small,
+.history-row small, .history-row time, .account-card > p { color: #a1b0bc; }
+.feature-card > a, .text-button, .danger-link { color: #7bc6a2; }
+.feature-index, .metric-preview > span, .week-preview > span, .sparkline > span { color: #93a4af; }
+.metric-preview, .week-preview, .sparkline, .how-step, .activity-row,
+.history-row, .calc-row { border-color: #2b3e55; }
+.metric-preview > b { color: #f2f6f5; }
+.metric-line, .week-preview i { background: #263951; }
+.week-preview i.done { background: #22533f; color: #a5e3bf; }
+.how-visual { background: radial-gradient(ellipse at 55% 35%, #23453d, #12243a 70%); }
+.how-visual:after { background: radial-gradient(circle, #8dbf91, #427b67); box-shadow: 0 0 55px #3c826955; }
+.how-circle { color: #143c31; }
+.how-orbit { border-color: #67ae8b66; }
+.how-float, .art-label { background: #172a40; color: #cce0d7; border: 1px solid #31465b; box-shadow: var(--shadow); }
+.how-float span, .art-label strong { color: #f0f5f2; }
+.art-label small { color: #a8b6bf; }
+.hero-art { background: linear-gradient(145deg, #183b38, #172a3a 55%, #243442); }
+.hero-art:before { background: linear-gradient(145deg, #1f453b66, #b2c78a20); }
+.sun { background: radial-gradient(circle at 38% 35%, #c8e0a4, #6ba786); box-shadow: 0 0 60px #72bd8c66; }
+.sun-orbit { border-color: #9fc9af44; }
+.trail { border-color: #89c5a080; }
+.trail-b { border-color: #adc78888; }
+.art-coordinate { color: #b5d0bd; }
+.closing { background: #11263a; }
+.closing-star { color: #1c3a48; }
+.public-footer .brand, .public-nav .brand, .side-brand { color: #f2f6f4; }
+.sidebar { background: #0d192c; border-color: #26384f; }
+.side-caption { color: #8293a3; }
+.nav-item { color: #a8b7c3; }
+.nav-item > span { color: #8fa2b0; }
+.nav-item:hover { background: #17283e; color: #f1f5f4; }
+.nav-item.active { background: #173a34; color: #a9e1c1; }
+.sidebar-bottom .privacy-note { background: #14283a; color: #8cd1ac; }
+.privacy-note b { color: #d5e8dc; }
+.privacy-note small, .user-chip small { color: #9caeb9; }
+.user-chip { border-color: #26384f; }
+.avatar, .profile-dot { background: #1c443b; color: #b3e8c8; }
+.topbar { background: rgba(13, 25, 44, .95); border-color: #26384f; }
+.crumb { color: #9aaab8; }
+.crumb b { color: #e7efec; }
+.stat-icon.mint { background: #1c443b; color: #9bdcba; }
+.stat-icon.blue { background: #203c54; color: #9cc9e8; }
+.stat-icon.peach { background: #4a382e; color: #edc09a; }
+.stat-icon.lilac { background: #383452; color: #c9b5ec; }
+.focus-tip, .metrics-explain, .week-day { background: #1a2c40; color: #b1dcbd; }
+.focus-tip span:last-child, .metrics-explain p { color: #afbdc4; }
+.goal-panel, .insight-card { background: #152d37; border-color: #24483d; }
+.goal-panel p, .insight-card > p { color: #b4c5c0; }
+.goal-panel .button { background: #20394a; color: #d7e8df; }
+.insight-card > .round-star, .round-star { background: #20443b; color: #9de0b8; }
+.calc-row { color: #b5c2c9; }
+.calc-row b { color: #e8f2ec; }
+.insight-card > small { color: #9dada7; }
+label { color: #c2ced1; }
+label > span, label small { color: #96a8b0; }
+input, select, textarea { background: #0e1a2d; border-color: #30445b; color: #f0f5f4; }
+input::placeholder, textarea::placeholder { color: #81919d; }
+input:focus, select:focus, textarea:focus { border-color: #5caa85; box-shadow: 0 0 0 3px #4ba87824; }
+.button-dark { background: #2d8064; color: #fff; }
+.button-dark:hover { background: #399575; }
+.button-outline { background: #182b41; border-color: #3b5267; color: #e9f2ee; }
+.button-quiet { color: #d7e2e1; }
+.empty-state, .empty-chart { color: #a2b0b8; }
+.activity-glyph, .coach-avatar, .coach-icon { background: #1b4038; color: #9cddba; }
+.nutrition-banner { background: #163334; color: #eef6f1; }
+.nutrition-banner p, .nutrition-note, .privacy-callout { color: #b3c5c1; }
+.food-orbit { color: #77b997; }
+.meal-label { color: #8dd0a8; }
+.meal-card p, .meal-cal small, .macro-list > div span { color: #a5b4bc; }
+.meal-card .meal-cal, .nutrition-total h2, .macro-list > div b { color: #eff6f2; }
+.macro-tags span { background: #22364b; color: #c7d5d0; }
+.nutrition-total { background: #14243b; }
+.coach-intro > p, .safety-note p { color: #adb9c0; }
+.safety-note { background: #172b3e; color: #89cba6; }
+.chat-panel { background: #14243b; }
+.chat-top, .chat-input { border-color: #2b3e55; }
+.chat-top small { color: #a3b3bc; }
+.chat-msg p { background: #1b2d43; color: #d1ddda; }
+.chat-msg.user p { background: #204238; color: #d5efdf; }
+.chat-msg > span { background: #20443b; color: #9fe0ba; }
+.quick-prompts button { background: #172940; border-color: #3a5063; color: #c5d6cf; }
+.quick-prompts button:hover { background: #1e3b3d; }
+.modal-backdrop { background: #050c17c9; }
+.modal-card > p { color: #adbbc4; }
+.auth-tabs { border-color: #2c4056; }
+.auth-tabs button { color: #9aabb6; }
+.auth-tabs button.selected { color: #99d9b6; border-color: #56a982; }
+.notice { background: #14243b; border-color: #30465b; color: #e9f1ed; }
+.notice.error, .error-text { color: #ffaaa0; }
+.confirm-check { color: #d1dcda; }
+.model-note { color: #a5b4bc; }
+.prediction-result { color: #8ed6ae; }
+.plan-row { border-color: #293b53; }
+.plan-row span { color: #7bc6a2; }
+.plan-row b { color: #d3dfda; }
+.button-danger { background: #a74541; }
