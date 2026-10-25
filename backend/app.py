@@ -43,4 +43,4 @@ def create_app(test_config=None):
     return app
 
 
-if __name__=="__main__":create_app().run(host="127.0.0.1",port=int(os.getenv("PORT","5000")),debug=os.getenv("FLASK_DEBUG","false").lower()=="true")
+if __name__=="__main__":create_app().run(host="0.0.0.0",port=int(os.getenv("PORT","5000")),debug=os.getenv("FLASK_DEBUG","false").lower()=="true")
