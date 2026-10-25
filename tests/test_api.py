@@ -227,4 +227,125 @@ class CoachApiTests(unittest.TestCase):
             self.assertEqual(WaterIntake.query.count(),0)
 
 
+    def test_registration_with_name_and_confirm_password(self):
+        # Mismatched confirm password
+        r = self.client.post("/api/register", json={
+            "full_name": "Vaibhav Patil",
+            "email": "vaibhav@example.com",
+            "password": "strongPassword123",
+            "confirm_password": "differentPassword"
+        })
+        self.assertEqual(r.status_code, 400)
+        # Valid registration with full name
+        r = self.client.post("/api/register", json={
+            "full_name": "Vaibhav Patil",
+            "email": "vaibhav@example.com",
+            "password": "strongPassword123",
+            "confirm_password": "strongPassword123"
+        })
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.json["user"]["full_name"], "Vaibhav Patil")
+        # Me and profile reflects full name
+        me = self.client.get("/api/me").json
+        self.assertEqual(me["user"]["full_name"], "Vaibhav Patil")
+        # Update full name
+        up = self.client.put("/api/profile", json={"full_name": "Vaibhav R. Patil"})
+        self.assertEqual(up.status_code, 200)
+        self.assertEqual(up.json["user"]["full_name"], "Vaibhav R. Patil")
+
+    def test_change_password(self):
+        self.client.post("/api/register", json={
+            "full_name": "Tester",
+            "email": "chg@example.com",
+            "password": "originalPassword123"
+        })
+        # Wrong current password
+        r = self.client.put("/api/change-password", json={
+            "current_password": "wrongPassword",
+            "new_password": "newStrongPassword123",
+            "confirm_password": "newStrongPassword123"
+        })
+        self.assertEqual(r.status_code, 400)
+        # Correct change
+        r = self.client.put("/api/change-password", json={
+            "current_password": "originalPassword123",
+            "new_password": "newStrongPassword123",
+            "confirm_password": "newStrongPassword123"
+        })
+        self.assertEqual(r.status_code, 200)
+        self.client.post("/api/logout")
+        # Old password fails
+        self.assertEqual(self.client.post("/api/login", json={"email": "chg@example.com", "password": "originalPassword123"}).status_code, 401)
+        # New password succeeds
+        self.assertEqual(self.client.post("/api/login", json={"email": "chg@example.com", "password": "newStrongPassword123"}).status_code, 200)
+
+    def test_forgot_password_and_reset_workflow(self):
+        self.client.post("/api/register", json={
+            "full_name": "Reset User",
+            "email": "reset@example.com",
+            "password": "initialPassword123"
+        })
+        self.client.post("/api/logout")
+
+        # Request reset link
+        res = self.client.post("/api/forgot-password", json={"email": "reset@example.com"})
+        self.assertEqual(res.status_code, 200)
+        dev_url = res.json.get("dev_reset_url")
+        self.assertIsNotNone(dev_url)
+        token = dev_url.split("reset_token=")[-1]
+
+        # Verify valid token
+        v = self.client.get(f"/api/verify-reset-token?token={token}")
+        self.assertEqual(v.status_code, 200)
+        self.assertTrue(v.json["valid"])
+        self.assertEqual(v.json["email"], "reset@example.com")
+
+        # Verify fake token
+        fake_v = self.client.get("/api/verify-reset-token?token=nonexistentToken")
+        self.assertEqual(fake_v.status_code, 200)
+        self.assertFalse(fake_v.json["valid"])
+
+        # Reset password with token
+        reset_res = self.client.post("/api/reset-password", json={
+            "token": token,
+            "password": "brandNewPassword123",
+            "confirm_password": "brandNewPassword123"
+        })
+        self.assertEqual(reset_res.status_code, 200)
+
+        # Single-use: using the token again must fail
+        reuse_res = self.client.post("/api/reset-password", json={
+            "token": token,
+            "password": "anotherPassword123",
+            "confirm_password": "anotherPassword123"
+        })
+        self.assertEqual(reuse_res.status_code, 400)
+
+        # Login with newly reset password
+        login_res = self.client.post("/api/login", json={"email": "reset@example.com", "password": "brandNewPassword123"})
+        self.assertEqual(login_res.status_code, 200)
+
+    def test_workout_update_endpoint(self):
+        self.register()
+        create_res = self.client.post("/api/workouts", json={
+            "exercise_type": "Jogging",
+            "duration_minutes": 20,
+            "exercise_date": "2026-10-20",
+            "notes": "Felt good"
+        })
+        self.assertEqual(create_res.status_code, 201)
+        w_id = create_res.json["workout"]["id"]
+
+        # Update workout
+        update_res = self.client.put(f"/api/workouts/{w_id}", json={
+            "exercise_type": "Running",
+            "duration_minutes": 35,
+            "exercise_date": "2026-10-20",
+            "notes": "Pushed pace"
+        })
+        self.assertEqual(update_res.status_code, 200)
+        self.assertEqual(update_res.json["workout"]["exercise_type"], "Running")
+        self.assertEqual(update_res.json["workout"]["duration_minutes"], 35)
+
+
 if __name__=="__main__":unittest.main()

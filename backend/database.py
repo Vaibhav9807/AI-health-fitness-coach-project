@@ -63,6 +63,14 @@ def migrate_legacy_sqlite(old_path, new_path):
 def init_db(app):
     with app.app_context():
         db.create_all()
+        try:
+            with db.engine.begin() as conn:
+                info = conn.exec_driver_sql("PRAGMA table_info(users)").fetchall()
+                col_names = [r[1] for r in info]
+                if "full_name" not in col_names:
+                    conn.exec_driver_sql("ALTER TABLE users ADD COLUMN full_name VARCHAR(120)")
+        except Exception:
+            pass
         old_path = app.config.get("LEGACY_DATABASE")
         new_path = app.config.get("DATABASE_FILE")
         if old_path and new_path:

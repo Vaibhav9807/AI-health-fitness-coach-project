@@ -1,32 +1,51 @@
-/* Readable type scale and new daily tracking components. */
-:root { color-scheme: dark; }
-body { font-size: 16px; line-height: 1.6; }
-h1, .welcome-row h1, .page-intro h1 { font-size: clamp(32px, 3.2vw, 40px); line-height: 1.2; }
-.hero h1 { font-size: clamp(38px, 4.4vw, 54px); line-height: 1.08; }
-h2, .section-head h2, .how-copy h2 { font-size: 27px; line-height: 1.28; }
-.panel-heading h2, .workout-form h2 { font-size: 22px; line-height: 1.35; }
-h3, .feature-card h3, .meal-card h3 { font-size: 20px; line-height: 1.35; }
+/* Readable type scale and modern component styles. */
+:root {
+  color-scheme: dark;
+  --font-main: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --fs-h1: clamp(30px, 3.2vw, 36px);
+  --fs-h2: clamp(22px, 2.2vw, 26px);
+  --fs-h3: clamp(18px, 1.8vw, 20px);
+  --fs-body: 16px;
+  --fs-label: 15px;
+  --fs-input: 16px;
+  --fs-button: 16px;
+  --fs-secondary: 14px;
+  --fs-meta: 13px;
+  --color-navy-dark: #0a111e;
+  --color-navy-card: #121e31;
+  --color-border: #22344d;
+  --color-accent-mint: #4d9c77;
+  --color-accent-mint-light: #77c99b;
+}
+body { font-family: var(--font-main); font-size: var(--fs-body); line-height: 1.6; }
+h1, .welcome-row h1, .page-intro h1 { font-family: var(--font-heading); font-size: var(--fs-h1); line-height: 1.2; font-weight: 750; }
+.hero h1 { font-family: var(--font-heading); font-size: clamp(36px, 4.2vw, 52px); line-height: 1.1; font-weight: 800; }
+h2, .section-head h2, .how-copy h2 { font-family: var(--font-heading); font-size: var(--fs-h2); line-height: 1.3; font-weight: 700; }
+.panel-heading h2, .workout-form h2, .goal-panel h2 { font-family: var(--font-heading); font-size: 22px; line-height: 1.35; font-weight: 700; }
+h3, .feature-card h3, .meal-card h3, .account-card h3 { font-family: var(--font-heading); font-size: var(--fs-h3); line-height: 1.35; font-weight: 650; }
 p, .welcome-row p, .page-intro p, .feature-card p, .how-copy > p, .nutrition-banner p,
-.goal-panel p, .insight-card > p, .coach-intro > p { font-size: 16px; line-height: 1.65; }
-label, .form-panel label, .workout-form label { font-size: 15px; }
-label > span, label small { font-size: 14px; }
-button, .button, .nav-item { font-size: 16px; }
+.goal-panel p, .insight-card > p, .coach-intro > p { font-size: var(--fs-body); line-height: 1.65; }
+label, .form-panel label, .workout-form label { font-size: var(--fs-label); font-weight: 500; }
+label > span, label small { font-size: var(--fs-secondary); }
+button, .button, .nav-item { font-size: var(--fs-button); }
 .eyebrow, .side-caption, .feature-index, .meal-label, .stat-top, .stat-helper,
 .muted-label, .empty-state, .nutrition-note, .privacy-callout, .model-note,
 .prediction-result, .chat-msg p, .chat-top b, .chat-top small, .chat-messages,
 .activity-row b, .activity-row small, .history-row, .history-row small,
-.history-row time, .stat-card > b small, .meal-cal small { font-size: 14px; }
+.history-row time, .stat-card > b small, .meal-cal small { font-size: var(--fs-secondary); }
+.macro-tags span, .metadata, .field-help { font-size: var(--fs-meta); }
 .side-caption { letter-spacing: .12em; }
 .nav-item { padding: 11px 12px; }
 .stat-card { min-height: 140px; padding: 20px; }
 .stat-top { gap: 10px; }
-.stat-card > b { font-size: 30px; }
-.stat-card > b small { font-weight: 500; }
+.stat-card > b { font-size: 30px; font-family: var(--font-heading); }
+.stat-card > b small { font-weight: 500; font-family: var(--font-main); }
 .panel { padding: 22px; }
 .panel-heading { gap: 14px; }
 .text-button { font-size: 15px; }
-.button, .button-outline, .button-dark { min-height: 44px; padding: 10px 16px; }
-input, select, textarea { min-height: 44px; font-size: 16px; padding: 10px 12px; }
+.button, .button-outline, .button-dark { min-height: 44px; padding: 10px 16px; font-weight: 600; }
+input, select, textarea { min-height: 44px; font-size: var(--fs-input); font-family: var(--font-main); padding: 10px 12px; }
 .form-grid { gap: 16px; }
 .profile-form label { font-size: 15px; }
 .feature-card { padding: 25px; }
@@ -176,4 +195,141 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+/* Password visibility toggle & strength meter */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-wrapper input {
+  width: 100%;
+  padding-right: 44px;
+}
+.toggle-password {
+  position: absolute;
+  right: 6px;
+  background: transparent;
+  border: 0;
+  color: #9cb0b8;
+  padding: 6px 8px;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.toggle-password:hover {
+  color: #e4eeea;
+}
+.password-strength {
+  margin-top: 6px;
+}
+.strength-meter {
+  height: 4px;
+  background: #25364b;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.strength-meter span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  transition: width .25s ease, background-color .25s ease;
+  background: #e66050;
+}
+.strength-meter span.weak { width: 33%; background: #e66050; }
+.strength-meter span.medium { width: 66%; background: #eab308; }
+.strength-meter span.strong { width: 100%; background: #53b985; }
+
+/* Auth extra links */
+.auth-extra-links {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 12px;
+}
+.text-link {
+  background: transparent;
+  border: 0;
+  color: #77c99b;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.text-link:hover {
+  color: #a3e3be;
+}
+.modal-foot-actions {
+  margin-top: 16px;
+  text-align: center;
+}
+
+/* Development reset helper box */
+.dev-reset-box {
+  background: rgba(77, 156, 119, 0.1);
+  border: 1px dashed #4d9c77;
+  border-radius: 8px;
+  padding: 14px;
+  margin: 14px 0;
+  font-size: 14px;
+}
+.dev-reset-box strong {
+  display: block;
+  color: #a3e3be;
+  margin-bottom: 4px;
+}
+.dev-reset-box p {
+  font-size: 13px;
+  color: #adbdc3;
+  margin: 0 0 8px;
+}
+.dev-link {
+  color: #8cdaa6;
+  word-break: break-all;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+/* History row action buttons */
+.history-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.edit-row-btn {
+  border: 0;
+  background: transparent;
+  color: #9cb0b8;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.edit-row-btn:hover {
+  color: #77c99b;
+}
+
+/* Subform in profile aside */
+.subform {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+.subform label {
+  font-size: 14px;
+}
+.subform input {
+  min-height: 40px;
+  padding: 8px 10px;
+  font-size: 15px;
+}
+.subform .button {
+  width: 100%;
 }

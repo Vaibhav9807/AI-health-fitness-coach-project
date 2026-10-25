@@ -37,17 +37,20 @@ Open this project folder in VS Code, then choose **Terminal → New Terminal**. 
 
 ## Features
 
-- Register, log in, log out, and delete an account. Passwords are hashed; private routes require a session and records are scoped by user ID.
+- Full name registration, secure login, logout, password visibility toggles (👁/🙈), password strength meter, and account deletion. Passwords are cryptographically hashed using `scrypt`; private routes require a session and records are scoped by user ID.
+- Complete Forgot Password & Password Recovery workflow: generates single-use, cryptographically secure 30-minute reset tokens, supports SMTP email dispatch in production, and provides a safe on-screen developer fallback link for local testing.
+- Change Password feature on the user profile page allowing users to update their credentials securely.
 - Profile-aware BMI, Mifflin–St Jeor BMR, estimated TDEE, and goal-adjusted calorie range. Inputs are validated and incomplete information produces a request for the missing fields.
 - Explainable rule-based weekly workout and recovery recommendations.
 - A date-specific daily checklist with seven starter habits, custom tasks, completion counts and percentage, a progress bar, reset, and saved completion history.
 - An adjustable daily water goal, quick-add intake buttons, and editable/removable dated entries. Water guidance is general tracking information, not a medical target.
 - Eight editable workout templates (chest, back, shoulders, arms, legs, abs, full body, and cardio). Goal and experience shape the recommendation and set count. Exercise checkboxes are always user-controlled; plans are never checked off automatically.
-- ORM-backed relational models for accounts, profiles, logged workouts, weights, saved diet plans, recommendations, daily tasks and completions, workout plans/exercises/completions, and daily water goals/entries, with per-user ownership and foreign-key cascades.
+- Workout history tracker with creation, inline editing (activity, duration, date, notes), and deletion after confirmation.
+- ORM-backed relational models for accounts, profiles, logged workouts, weights, saved diet plans, recommendations, daily tasks and completions, workout plans/exercises/completions, daily water goals/entries, and single-use password reset tokens, with per-user ownership and foreign-key cascades.
 - Local sample meal planner with vegetarian/vegan selection and comma-separated allergy filtering. Nutrition values are rough examples, not clinical guidance.
 - Rule-based chat fallback. If `OPENAI_API_KEY` is configured in `.env`, general fitness questions can use the server-side OpenAI Chat Completions API (`OPENAI_MODEL` selects the model); a timeout, provider error, or missing key falls back to local rules. Medical-risk questions stay on the local safe response. Only the current question is sent; profile data and API keys are never sent to the browser. No key is needed for the app to work.
 - Workout history, weight check-ins, date-filtered charts, weekly frequency, and empty states based on saved records.
-- Responsive layouts, readable type, loading and success/error feedback, accessible controls, and real Unsplash photos with in-app fallbacks if an image cannot load.
+- Responsive layouts, readable typography system (with CSS variables and clamp scales), loading and success/error feedback, accessible controls, and real Unsplash photos with in-app fallbacks if an image cannot load.
 - Dataset-driven fitness-level score estimate, with model status shown in the workout page only when the evaluated model artifact is present. The estimate is distinct from calculated BMI/BMR/TDEE and rule-based recommendations.
 
 ## REST API
@@ -56,16 +59,22 @@ All request bodies are JSON. Authentication uses the Flask session cookie.
 
 | Method | Route | Purpose |
 |---|---|---|
-| POST | `/api/register`, `/api/login`, `/api/logout` | Authentication |
-| GET | `/api/me`, `/api/profile` · PUT `/api/profile` | Session and profile |
+| POST | `/api/register` | Register with full name, email, password, and confirm password |
+| POST | `/api/login`, `/api/logout` | Authentication and session termination |
+| POST | `/api/forgot-password` | Generate single-use password reset token (SMTP or dev fallback link) |
+| GET | `/api/verify-reset-token` | Validate password reset token validity and expiry |
+| POST | `/api/reset-password` | Set new password with valid token and invalidate token |
+| PUT | `/api/change-password` | Update password for authenticated user (verifies current password) |
+| GET | `/api/me`, `/api/profile` · PUT `/api/profile` | Session and profile (view/edit full name, age, metrics, goals) |
 | POST | `/api/health-metrics` | Estimate BMI, BMR, TDEE, range |
 | GET | `/api/recommendations`, `/api/workout-plan`, `/api/diet-plan` | Local plans |
-| GET/POST | `/api/workouts` | List/add workouts |
-| DELETE | `/api/workouts/<id>` | Delete own workout |
+| GET/POST | `/api/workouts` | List or record workout sessions |
+| PUT | `/api/workouts/<id>` | Update an existing workout record |
+| DELETE | `/api/workouts/<id>` | Delete own workout record |
 | GET/POST | `/api/progress` | Read date-filtered progress/add weight |
 | GET | `/api/model-status` | Check whether the evaluated local dataset model is available |
 | POST | `/api/model-prediction` | Dataset fitness-level score estimate using the signed-in user's profile |
-| POST | `/api/chat` | Rule-based general fitness response |
+| POST | `/api/chat` | Rule-based general fitness response with optional OpenAI adapter |
 | DELETE | `/api/account` | Confirm with password and delete account/data |
 | GET/POST | `/api/daily-tasks` | Read or add tasks for a date |
 | PUT | `/api/daily-tasks/<id>/completion` · POST `/api/daily-tasks/reset` | Check off a task or reset today's checklist |
@@ -76,12 +85,28 @@ All request bodies are JSON. Authentication uses the Flask session cookie.
 | PATCH/DELETE | `/api/workout-exercises/<id>` | Edit or remove an exercise |
 | PUT | `/api/workout-exercises/<id>/completion` | Save an exercise completion check |
 
-New tables are `daily_tasks`, `task_completions`, `workout_plans`, `workout_exercises`, `workout_completions`, `water_goals`, and `water_intakes`. They are created alongside the existing schema with `create_all`; existing tables and user records are not dropped or recreated. The new records use foreign keys to the existing user table and are filtered by the signed-in user's ID.
+## Password Recovery & Email Configuration
+
+In `.env`, configure standard SMTP settings to deliver real password reset emails in production:
+
+```ini
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM=noreply@healthcoach.local
+SMTP_USE_TLS=true
+```
+
+**Local Testing Without SMTP:**
+When `SMTP_HOST` is omitted or in development mode, clicking **"Send reset link"** on the Forgot Password modal automatically outputs a clickable reset link on the screen and logs it to the terminal. You can click it directly to test the complete reset flow without setting up any email provider!
 
 ## Test
 
+Run the full automated test suite:
+
 ```powershell
-python -m unittest discover -s tests -v
+.\venv\Scripts\python.exe -m unittest tests/test_api.py
 ```
 
 Tests use temporary SQLite databases and cover frontend assets, authentication, validation, calculations, workout and progress persistence, task reset and completion, water-goal and intake correction, workout-plan exercise editing and completion, user isolation, allergen filtering, chat fallback, and cascading account deletion.

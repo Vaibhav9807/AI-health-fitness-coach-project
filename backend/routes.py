@@ -1,15 +1,20 @@
 """REST API routes using authenticated SQLAlchemy records."""
+import hashlib
 import json
+import os
 import re
-from datetime import date, datetime, timezone
+import secrets
+import smtplib
+from datetime import date, datetime, timedelta, timezone
+from email.message import EmailMessage
 from functools import wraps
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, request, session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from werkzeug.security import check_password_hash, generate_password_hash
 from .extensions import db
 from .models import (User, UserProfile, WorkoutRecord, WeightRecord, DietPlan, Recommendation,
                      DailyTask, TaskCompletion, WorkoutPlan, WorkoutExercise,
-                     WorkoutCompletion, WaterGoal, WaterIntake)
+                     WorkoutCompletion, WaterGoal, WaterIntake, PasswordResetToken)
 from .calculations import health_metrics
 from .recommendation_engine import recommendations
 from .diet_planner import meal_plan
@@ -44,6 +49,19 @@ def body():
 
 def current_user():
     return db.session.get(User, session["user_id"])
+
+
+def user_dict(u):
+    raw_name = (u.full_name or "").strip()
+    if not raw_name:
+        handle = u.email.split('@')[0].split('.')[0].replace('_', ' ').replace('-', ' ').title()
+        raw_name = handle or "Friend"
+    return {
+        "id": u.id,
+        "email": u.email,
+        "full_name": u.full_name or "",
+        "display_name": raw_name
+    }
 
 
 def profile_row(user):
@@ -82,59 +100,231 @@ def invalid(error):
 @api.errorhandler(SQLAlchemyError)
 def database_error(error):
     db.session.rollback()
-    api.logger.exception("Database operation failed", exc_info=error)
+    current_app.logger.exception("Database operation failed", exc_info=error)
     return jsonify(error="The database could not complete that request. Please try again."), 500
 
 
 @api.post("/register")
 def register():
-    data=body(); email=str(data.get("email","")).strip().lower(); password=str(data.get("password", ""))
-    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email): raise ValueError("Enter a valid email address.")
-    if len(password)<10 or len(password)>128: raise ValueError("Password must be 10–128 characters.")
-    user=User(email=email,password_hash=generate_password_hash(password)); user.profile=UserProfile()
+    data = body()
+    email = str(data.get("email", "")).strip().lower()
+    password = str(data.get("password", ""))
+    confirm_password = str(data.get("confirm_password", ""))
+    full_name = str(data.get("full_name", "")).strip()
+
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        raise ValueError("Enter a valid email address.")
+    if len(password) < 10 or len(password) > 128:
+        raise ValueError("Password must be 10–128 characters.")
+    if confirm_password and confirm_password != password:
+        raise ValueError("Password and confirmation password do not match.")
+    if not full_name:
+        full_name = email.split('@')[0].split('.')[0].replace('_', ' ').replace('-', ' ').title()
+    elif len(full_name) > 120:
+        raise ValueError("Full name must be 120 characters or fewer.")
+
+    user = User(full_name=full_name, email=email, password_hash=generate_password_hash(password))
+    user.profile = UserProfile()
     db.session.add(user)
-    try: db.session.commit()
+    try:
+        db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return jsonify(error="An account with that email already exists."),409
-    session.clear(); session["user_id"]=user.id
-    return jsonify(user={"id":user.id,"email":user.email}),201
+        return jsonify(error="An account with that email already exists."), 409
+    session.clear()
+    session["user_id"] = user.id
+    return jsonify(user=user_dict(user), profile=profile_row(user)), 201
 
 
 @api.post("/login")
 def login():
-    data=body(); email=str(data.get("email","")).strip().lower(); password=str(data.get("password", ""))
-    user=User.query.filter_by(email=email).first()
-    if not user or not check_password_hash(user.password_hash,password): return jsonify(error="Email or password is incorrect."),401
-    session.clear(); session["user_id"]=user.id
-    return jsonify(user={"id":user.id,"email":user.email})
+    data = body()
+    email = str(data.get("email", "")).strip().lower()
+    password = str(data.get("password", ""))
+    user = User.query.filter_by(email=email).first()
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify(error="Email or password is incorrect."), 401
+    session.clear()
+    session["user_id"] = user.id
+    return jsonify(user=user_dict(user), profile=profile_row(user))
 
 
 @api.post("/logout")
-def logout(): session.clear(); return jsonify(message="Logged out.")
+def logout():
+    session.clear()
+    return jsonify(message="Logged out.")
 
 
 @api.get("/me")
 @login_required
 def me():
-    u=current_user()
-    return jsonify(user={"id":u.id,"email":u.email}, profile=profile_row(u))
+    u = current_user()
+    return jsonify(user=user_dict(u), profile=profile_row(u))
 
 
-@api.route("/profile", methods=["GET","PUT"])
+@api.route("/profile", methods=["GET", "PUT"])
 @login_required
 def profile():
-    user=current_user()
-    if request.method=="PUT":
-        p=validate_profile(body())
-        for key,value in p.items(): setattr(user.profile,key,value)
+    user = current_user()
+    if request.method == "PUT":
+        data = body()
+        if "full_name" in data:
+            fn = str(data["full_name"]).strip()
+            if not fn or len(fn) > 120:
+                raise ValueError("Full name must be 1–120 characters.")
+            user.full_name = fn
+        p = validate_profile(data)
+        for key, value in p.items():
+            setattr(user.profile, key, value)
         if p.get("weight_kg"):
-            today=date.today().isoformat()
-            saved=WeightRecord.query.filter_by(user_id=user.id,record_date=today).first()
-            if saved: saved.weight_kg=p["weight_kg"]
-            else: db.session.add(WeightRecord(user_id=user.id,weight_kg=p["weight_kg"],record_date=today))
+            today = date.today().isoformat()
+            saved = WeightRecord.query.filter_by(user_id=user.id, record_date=today).first()
+            if saved:
+                saved.weight_kg = p["weight_kg"]
+            else:
+                db.session.add(WeightRecord(user_id=user.id, weight_kg=p["weight_kg"], record_date=today))
         db.session.commit()
-    return jsonify(profile=profile_row(user))
+    return jsonify(user=user_dict(user), profile=profile_row(user))
+
+
+@api.put("/change-password")
+@login_required
+def change_password():
+    user = current_user()
+    data = body()
+    current_pw = str(data.get("current_password", ""))
+    new_pw = str(data.get("new_password", ""))
+    confirm_pw = str(data.get("confirm_password", ""))
+
+    if not check_password_hash(user.password_hash, current_pw):
+        return jsonify(error="Current password is incorrect."), 400
+    if len(new_pw) < 10 or len(new_pw) > 128:
+        raise ValueError("New password must be 10–128 characters.")
+    if confirm_pw and confirm_pw != new_pw:
+        raise ValueError("New password and confirmation do not match.")
+
+    user.password_hash = generate_password_hash(new_pw)
+    db.session.commit()
+    return jsonify(message="Password updated successfully.")
+
+
+def _send_smtp_email(to_email, subject, body_text):
+    host = os.getenv("SMTP_HOST")
+    if not host:
+        return False
+    port = int(os.getenv("SMTP_PORT", 587))
+    user = os.getenv("SMTP_USER")
+    password = os.getenv("SMTP_PASSWORD")
+    from_addr = os.getenv("SMTP_FROM", user or "noreply@fitnesscoach.local")
+    use_tls = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_email
+    msg.set_content(body_text)
+
+    try:
+        server = smtplib.SMTP(host, port, timeout=10)
+        if use_tls:
+            server.starttls()
+        if user and password:
+            server.login(user, password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as err:
+        current_app.logger.warning("SMTP delivery failed: %s", err)
+        return False
+
+
+@api.post("/forgot-password")
+def forgot_password():
+    data = body()
+    email = str(data.get("email", "")).strip().lower()
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        raise ValueError("Enter a valid email address.")
+
+    user = User.query.filter_by(email=email).first()
+    dev_reset_url = None
+
+    if user:
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30)
+        reset_record = PasswordResetToken(
+            user_id=user.id,
+            token_hash=token_hash,
+            expires_at=expires_at,
+            used=False
+        )
+        db.session.add(reset_record)
+        db.session.commit()
+
+        reset_url = f"{request.host_url.rstrip('/')}/?reset_token={raw_token}"
+        subject = "Reset your AI Health & Fitness Coach password"
+        message_body = (
+            f"Hello {user.full_name or 'there'},\n\n"
+            f"A password reset was requested for your account ({user.email}).\n"
+            f"Open the link below (valid for 30 minutes) to choose a new password:\n\n"
+            f"{reset_url}\n\n"
+            f"If you did not request this, you can safely ignore this message.\n"
+        )
+        sent = _send_smtp_email(user.email, subject, message_body)
+        is_dev = os.getenv("FLASK_DEBUG", "false").lower() == "true" or not os.getenv("SMTP_HOST")
+        if is_dev or not sent:
+            current_app.logger.info("[DEV] Password reset link for %s: %s", user.email, reset_url)
+            dev_reset_url = reset_url
+
+    return jsonify(
+        message="If that email is registered, password reset instructions have been sent.",
+        dev_reset_url=dev_reset_url
+    )
+
+
+@api.get("/verify-reset-token")
+def verify_reset_token():
+    token = request.args.get("token", "").strip()
+    if not token:
+        return jsonify(valid=False, error="Reset token is missing."), 400
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    record = PasswordResetToken.query.filter_by(token_hash=token_hash, used=False).first()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if not record or record.expires_at < now:
+        return jsonify(valid=False, error="This reset link is invalid or has expired.")
+    return jsonify(valid=True, email=record.user.email)
+
+
+@api.post("/reset-password")
+def reset_password():
+    data = body()
+    token = str(data.get("token", "")).strip()
+    password = str(data.get("password", ""))
+    confirm_password = str(data.get("confirm_password", ""))
+
+    if not token:
+        raise ValueError("Reset token is required.")
+    if len(password) < 10 or len(password) > 128:
+        raise ValueError("Password must be 10–128 characters.")
+    if confirm_password and confirm_password != password:
+        raise ValueError("Password and confirmation password do not match.")
+
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    record = PasswordResetToken.query.filter_by(token_hash=token_hash, used=False).first()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if not record or record.expires_at < now:
+        return jsonify(error="Reset link is invalid or has expired. Please request a new one."), 400
+
+    user = record.user
+    user.password_hash = generate_password_hash(password)
+    record.used = True
+    PasswordResetToken.query.filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.id != record.id
+    ).update({"used": True})
+    db.session.commit()
+    session.clear()
+    return jsonify(message="Password reset successfully. Please log in with your new password.")
 
 
 @api.post("/health-metrics")
@@ -223,6 +413,41 @@ def delete_workout(record_id):
     if not record:return jsonify(error="Workout not found."),404
     db.session.delete(record);db.session.commit()
     return jsonify(message="Workout deleted.")
+
+
+@api.put("/workouts/<int:record_id>")
+@login_required
+def update_workout(record_id):
+    record = WorkoutRecord.query.filter_by(id=record_id, user_id=session["user_id"]).first()
+    if not record:
+        return jsonify(error="Workout not found."), 404
+    d = body()
+    exercise = str(d.get("exercise_type", record.exercise_type)).strip()
+    notes = str(d.get("notes", record.notes))[:500]
+    try:
+        minutes = int(d.get("duration_minutes", record.duration_minutes))
+        day = date.fromisoformat(d.get("exercise_date", record.exercise_date)).isoformat()
+    except (ValueError, TypeError):
+        raise ValueError("Enter a valid duration and exercise date.")
+    if day > date.today().isoformat():
+        raise ValueError("Exercise date cannot be in the future.")
+    if not exercise or len(exercise) > 60:
+        raise ValueError("Exercise type must be 1–60 characters.")
+    if not 1 <= minutes <= 600:
+        raise ValueError("Duration must be between 1 and 600 minutes.")
+    record.exercise_type = exercise
+    record.duration_minutes = minutes
+    record.exercise_date = day
+    record.notes = notes
+    db.session.commit()
+    return jsonify(workout={
+        "id": record.id,
+        "user_id": record.user_id,
+        "exercise_type": record.exercise_type,
+        "duration_minutes": record.duration_minutes,
+        "exercise_date": record.exercise_date,
+        "notes": record.notes
+    })
 
 
 @api.route("/progress",methods=["GET","POST"])
